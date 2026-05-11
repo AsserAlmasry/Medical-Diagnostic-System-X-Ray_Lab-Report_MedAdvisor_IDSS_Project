@@ -1,0 +1,13 @@
+streamlit==1.32.0
+torch
+torchvision
+transformers
+ultralytics
+langchain
+google-genai
+langchain-google-genai
+langchain-text-splitters
+langchain-community
+pypdf
+Pillow
+pandas
