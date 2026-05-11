@@ -84,8 +84,8 @@ const XRayView = () => {
         )}
 
         {result && (
-          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} style={{ marginTop: '40px', borderTop: '1px solid var(--glass-border)', paddingTop: '30px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="result-card">
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
               <div className={`risk-badge risk-${result.risk_level?.toLowerCase() || 'low'}`}>
                 {result.risk_level || 'Low'} Risk Level
               </div>
@@ -93,19 +93,41 @@ const XRayView = () => {
                 <div style={{ fontSize: '18px', fontWeight: 'bold' }}>
                   Confidence: <span style={{ color: 'var(--primary)' }}>{result.confidence_score}%</span>
                 </div>
-                {result.system_status && (
-                  <div style={{ fontSize: '10px', color: 'rgba(0,242,255,0.6)', marginTop: '5px', letterSpacing: '0.5px' }}>
-                    ● {result.system_status}
-                  </div>
-                )}
+                <div style={{ fontSize: '10px', color: 'rgba(0,242,255,0.6)', marginTop: '5px' }}>● {result.system_status}</div>
               </div>
             </div>
-            
-            <div style={{ background: 'rgba(255,255,255,0.02)', padding: '25px', borderRadius: '15px', marginTop: '20px' }}>
-              <h3>Diagnostic Summary</h3>
-              <p style={{ marginTop: '10px', color: 'rgba(255,255,255,0.8)', lineHeight: '1.6' }}>{result.summary}</p>
-            </div>
 
+            {/* Detections Table */}
+            {result.detections && result.detections.length > 0 && (
+              <div style={{ marginBottom: '25px', overflowX: 'auto' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
+                  <thead>
+                    <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.1)', color: 'var(--primary)' }}>
+                      <th style={{ textAlign: 'left', padding: '10px' }}>Clinical Finding</th>
+                      <th style={{ textAlign: 'left', padding: '10px' }}>Brief Description</th>
+                      <th style={{ textAlign: 'right', padding: '10px' }}>Confidence</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {result.detections.map((det, idx) => (
+                      <tr key={idx} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                        <td style={{ padding: '12px', fontWeight: 'bold' }}>{det.class}</td>
+                        <td style={{ padding: '12px', opacity: 0.8 }}>{det.brief}</td>
+                        <td style={{ padding: '12px', textAlign: 'right', color: 'var(--primary)' }}>{det.confidence}%</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+
+            <div style={{ padding: '20px', background: 'rgba(255,255,255,0.03)', borderRadius: '12px', borderLeft: '4px solid var(--primary)' }}>
+              <h4 style={{ margin: '0 0 10px 0', fontSize: '14px', color: 'var(--primary)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <FileText size={16} /> Clinical Interpretation
+              </h4>
+              <p style={{ margin: 0, fontSize: '14px', lineHeight: '1.6', opacity: 0.9 }}>{result.summary}</p>
+            </div>
+            
             {result.annotated_image_url && (
               <div style={{ marginTop: '30px' }}>
                 <h3 style={{ marginBottom: '15px' }}>Neural Heatmap & Detection</h3>

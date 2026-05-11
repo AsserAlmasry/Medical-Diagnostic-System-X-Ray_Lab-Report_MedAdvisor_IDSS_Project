@@ -170,6 +170,26 @@ h1, h2, h3, h4 {
   background: rgba(0, 242, 255, 0.02);
 }
 
+/* Table Styling */
+table thead th {
+  font-family: 'Outfit', sans-serif;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  font-size: 11px;
+}
+
+table tbody tr:hover {
+  background: rgba(0, 242, 255, 0.02);
+}
+
+.result-card {
+  background: rgba(255, 255, 255, 0.02);
+  padding: 30px;
+  border-radius: 20px;
+  border: 1px solid var(--glass-border);
+  margin-top: 30px;
+}
+
 .med-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
