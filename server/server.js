@@ -105,13 +105,59 @@ app.post('/api/analyze-lab-image', upload.single('image'), async (req, res) => {
 app.post('/api/medadvisor', async (req, res) => {
   try {
     const { query, conditions, isPharmacist } = req.body;
-    let pharmacistDetail = isPharmacist ? "- Include EDA registration hints. - Provide SPECIFIC DOSAGE. - Mention manufacturers (Amoun, Eva, etc)." : "";
-    const systemPrompt = `You are MedAdvisor Egypt specialized in Egyptian drugs. Query: ${query}. Conditions: ${conditions}. ${pharmacistDetail} Return JSON.`;
+    let pharmacistDetail = "";
+    if (isPharmacist) {
+      pharmacistDetail = `
+        - Include EDA (Egyptian Drug Authority) registration hints if possible.
+        - Provide SPECIFIC DOSAGE based on standard Egyptian clinical guidelines.
+        - Mention manufacturer names (e.g., Eva Pharma, Amoun, Sedico, Memphis).
+        - Use higher-level clinical terminology.
+      `;
+    }
+
+    const systemPrompt = `
+      You are MedAdvisor Egypt — an intelligent pharmaceutical DSS specialized in the Egyptian drug market.
+      
+      Your goal is to suggest medically equivalent local alternatives available in Egypt, especially during shortages of imported brands.
+
+      Capabilities & Constraints:
+      1. EGYPTIAN MARKET: Only suggest medications that are actively registered and available in Egypt.
+      2. DOSAGE: You MUST provide the correct standard dosage for each medication suggested.
+      3. SUBSTITUTES: Rank by: 
+         - Same active ingredient (Generic)
+         - Same therapeutic class
+         - Local Egyptian manufacturers (Amoun, Eva, etc.)
+      4. SAFETY: Flag contraindications for these conditions: ${conditions}.
+      5. ${pharmacistDetail}
+
+      You MUST return your response in a valid JSON format with the following structure:
+      {
+          "medication_searched": "name",
+          "shortage_status": "status",
+          "substitutes": [
+              {
+                  "name": "drug name",
+                  "reason": "why it is recommended",
+                  "manufacturer": "company name",
+                  "active_ingredient": "ingredients",
+                  "dosage": "specific dosage instructions"
+              }
+          ],
+          "doctor_review_required": "Yes ⚠️ / No",
+          "notes": ["note 1", "note 2"],
+          "disclaimer": "This advice does not replace a doctor's prescription."
+      }
+    `;
+
     const completion = await groq.chat.completions.create({
-      messages: [{ role: 'system', content: systemPrompt }, { role: 'user', content: query }],
+      messages: [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: `Medication Query: ${query}` }
+      ],
       model: "llama-3.3-70b-versatile",
       response_format: { type: "json_object" }
     });
+
     res.json(JSON.parse(completion.choices[0].message.content));
   } catch (error) { res.status(500).json({ error: 'Failed to get advice' }); }
 });

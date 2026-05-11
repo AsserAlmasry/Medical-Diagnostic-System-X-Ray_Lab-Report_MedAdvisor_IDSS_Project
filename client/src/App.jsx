@@ -307,8 +307,10 @@ const MedAdvisorView = () => {
         {result && (
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} style={{ marginTop: '40px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '25px', borderBottom: '1px solid var(--glass-border)', paddingBottom: '15px' }}>
-              <p><strong>Target:</strong> <span style={{ color: 'var(--primary)', fontSize: '18px' }}>{result.medication_searched}</span></p>
-              <p><strong>Review Needed:</strong> <span style={{ color: result.doctor_review_required.includes('Yes') ? '#ff0055' : 'var(--primary)' }}>{result.doctor_review_required}</span></p>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '25px', borderBottom: '1px solid var(--glass-border)', paddingBottom: '15px' }}>
+              <p><strong>Target:</strong> <span style={{ color: 'var(--primary)', fontSize: '18px' }}>{result?.medication_searched || 'N/A'}</span></p>
+              <p><strong>Review Needed:</strong> <span style={{ color: result?.doctor_review_required?.includes('Yes') ? '#ff0055' : 'var(--primary)' }}>{result?.doctor_review_required || 'No'}</span></p>
+            </div>
             </div>
             
             <h3 style={{ marginBottom: '20px' }}>🇪🇬 Recommended Substitutes (Egyptian Market)</h3>
