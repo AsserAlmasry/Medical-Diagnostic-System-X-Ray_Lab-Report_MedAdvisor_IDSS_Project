@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MedAI Insight Knowledge Graph</title>
+    <script src="https://unpkg.com/neo4j-driver"></script>
+    <script src="https://unpkg.com/force-graph"></script>
+    <style>
+        body { margin: 0; background: #050a10; overflow: hidden; font-family: 'Inter', sans-serif; }
+        #graph { width: 100vw; height: 100vh; }
+        .controls {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background: rgba(16, 24, 39, 0.9);
+            padding: 20px;
+            border-radius: 15px;
+            border: 1px solid rgba(255,255,255,0.1);
+            color: white;
+            pointer-events: none;
+            backdrop-filter: blur(10px);
+        }
+        .legend {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            background: rgba(16, 24, 39, 0.9);
+            padding: 15px;
+            border-radius: 12px;
+            color: white;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+        .legend-item { display: flex; alignItems: center; gap: 10px; margin-bottom: 5px; font-size: 12px; }
+        .dot { width: 10px; height: 10px; border-radius: 50%; }
+    </style>
+</head>
+<body>
+    <div id="graph"></div>
+    <div class="controls">
+        <h2 style="margin: 0; color: #00f2ff;">Medical Knowledge Graph</h2>
+        <p style="font-size: 12px; opacity: 0.6;">Interactive Neuro-Symbolic Visualization</p>
+    </div>
+    <div class="legend">
+        <div class="legend-item"><div class="dot" style="background: #00f2ff;"></div> Drug</div>
+        <div class="legend-item"><div class="dot" style="background: #7d00ff;"></div> Company</div>
+        <div class="legend-item"><div class="dot" style="background: #ff5e00;"></div> Category</div>
+    </div>
+
+    <script>
+        const driver = neo4j.driver(
+            "neo4j+s://0b5ed9e3.databases.neo4j.io",
+            neo4j.auth.basic("0b5ed9e3", "cQ1rk6ll-JYPWLApUlLxizXTWFP1wlI1QIVpvnpYSV0")
+        );
+
+        async function fetchData() {
+            const session = driver.session();
+            try {
+                const result = await session.run(`
+                    MATCH (n)-[r]->(m)
+                    RETURN n, r, m LIMIT 300
+                `);
+
+                const nodes = new Map();
+                const links = [];
+
+                result.records.forEach(record => {
+                    const n = record.get('n');
+                    const m = record.get('m');
+                    const r = record.get('r');
+
+                    [n, m].forEach(node => {
+                        if (!nodes.has(node.identity.low)) {
+                            nodes.set(node.identity.low, {
+                                id: node.identity.low,
+                                name: node.properties.name,
+                                label: node.labels[0]
+                            });
+                        }
+                    });
+
+                    links.push({
+                        source: n.identity.low,
+                        target: m.identity.low,
+                        type: r.type
+                    });
+                });
+
+                return { nodes: Array.from(nodes.values()), links };
+            } finally {
+                await session.close();
+            }
+        }
+
+        fetchData().then(data => {
+            const Graph = ForceGraph()(document.getElementById('graph'))
+                .graphData(data)
+                .nodeId('id')
+                .nodeLabel(node => `${node.label}: ${node.name}`)
+                .nodeAutoColorBy('label')
+                .nodeCanvasObject((node, ctx, globalScale) => {
+                    const label = node.name;
+                    const fontSize = 12/globalScale;
+                    ctx.font = `${fontSize}px Inter`;
+                    const textWidth = ctx.measureText(label).width;
+                    const bckgDimensions = [textWidth, fontSize].map(n => n + fontSize * 0.2);
+
+                    ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
+                    ctx.beginPath();
+                    ctx.arc(node.x, node.y, 4, 0, 2 * Math.PI, false);
+                    ctx.fill();
+
+                    // Node Color based on Label
+                    if(node.label === 'Drug') ctx.fillStyle = '#00f2ff';
+                    else if(node.label === 'Company') ctx.fillStyle = '#7d00ff';
+                    else ctx.fillStyle = '#ff5e00';
+                    
+                    ctx.beginPath();
+                    ctx.arc(node.x, node.y, 2, 0, 2 * Math.PI, false);
+                    ctx.fill();
+
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.fillStyle = 'rgba(255,255,255,0.6)';
+                    ctx.fillText(label, node.x, node.y + 8);
+                })
+                .linkColor(() => 'rgba(255,255,255,0.1)')
+                .linkDirectionalParticles(2)
+                .linkDirectionalParticleSpeed(d => 0.005)
+                .backgroundColor('#050a10');
+        });
+    </script>
+</body>
+</html>

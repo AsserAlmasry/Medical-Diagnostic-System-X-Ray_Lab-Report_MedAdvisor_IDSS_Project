@@ -67,73 +67,75 @@ app.post('/api/analyze-lab-image', upload.single('image'), async (req, res) => {
 
       Provide a deep clinical assessment. For each abnormal value:
       1. Explain WHY it might be high/low (Pathophysiology).
-      2. Mention clinical correlations (e.g., if glucose is high, mention A1C or hydration).
-      3. Suggest specific follow-up tests or lifestyle changes.
+      2. Mention clinical correlations.
+      3. Suggest follow-up tests.
 
-      Format exactly as:
-      SUMMARY: [detailed clinical assessment and explanation]
-      ISSUES: [issue1 | issue2 | issue3]
-      RISK: [Low/Medium/High]
-      RECOMMENDATIONS: [rec1 | rec2 | rec3]
+      Return your response in a valid JSON format:
+      {
+        "summary": "detailed clinical assessment",
+        "detected_issues": ["issue1", "issue2"],
+        "risk_level": "Low/Medium/High",
+        "recommendations": ["rec1", "rec2"]
+      }
     `;
 
     const completion = await groq.chat.completions.create({
       messages: [{ role: 'user', content: prompt }],
       model: "llama-3.3-70b-versatile",
+      response_format: { type: "json_object" }
     });
 
-    const response = completion.choices[0].message.content;
-    const parsed = { summary: "", detected_issues: [], risk_level: "Unknown", recommendations: [] };
-    response.split('\n').forEach(line => {
-      line = line.trim();
-      if (line.startsWith("SUMMARY:")) parsed.summary = line.replace("SUMMARY:", "").trim();
-      else if (line.startsWith("ISSUES:")) {
-        parsed.detected_issues = line.replace("ISSUES:", "").trim().split('|').map(i => i.trim()).filter(i => i);
-      }
-      else if (line.startsWith("RISK:")) parsed.risk_level = line.replace("RISK:", "").trim();
-      else if (line.startsWith("RECOMMENDATIONS:")) {
-        parsed.recommendations = line.replace("RECOMMENDATIONS:", "").trim().split('|').map(r => r.trim()).filter(r => r);
-      }
-    });
-    res.json(parsed);
+    res.json(JSON.parse(completion.choices[0].message.content));
   } catch (error) {
-    res.status(500).json({ error: 'Failed to interpret lab report' });
+    console.error("Lab Error:", error);
+    let errorMsg = "Failed to interpret lab report";
+    if (error.response?.error?.message) {
+      errorMsg = error.response.error.message;
+    } else if (error.message) {
+      errorMsg = error.message;
+    }
+    res.status(500).json({ error: errorMsg });
   }
 });
 
-// 2. MedAdvisor Egypt
+const { getSymbolicAdvice } = require('./expert_system');
+
+// 2. MedAdvisor Egypt (Neuro-Symbolic)
 app.post('/api/medadvisor', async (req, res) => {
   try {
     const { query, conditions, isPharmacist } = req.body;
+    
+    // Step 1: Query Symbolic Layer (Expert System)
+    const symbolicData = await getSymbolicAdvice(query, conditions, isPharmacist);
+    
+    // Step 2: Query Neural Layer (Groq LLM) for Explanation
     let pharmacistDetail = "";
     if (isPharmacist) {
       pharmacistDetail = `
-        - Include EDA (Egyptian Drug Authority) registration hints if possible.
         - Provide SPECIFIC DOSAGE based on standard Egyptian clinical guidelines.
-        - Mention manufacturer names (e.g., Eva Pharma, Amoun, Sedico, Memphis).
         - Use higher-level clinical terminology.
       `;
     }
 
     const systemPrompt = `
-      You are MedAdvisor Egypt — an intelligent pharmaceutical DSS specialized in the Egyptian drug market.
+      You are MedAdvisor Egypt. You have been provided with data from a Symbolic Clinical Reasoning Engine (Expert System).
       
-      Your goal is to suggest medically equivalent local alternatives available in Egypt, especially during shortages of imported brands.
+      EXPERT SYSTEM DATA:
+      ${JSON.stringify(symbolicData, null, 2)}
 
+      Your goal is to explain these findings for the user. 
+      If there are substitutes, explain WHY they are good alternatives (same category/manufactured in Egypt).
+      
       Capabilities & Constraints:
-      1. EGYPTIAN MARKET: Only suggest medications that are actively registered and available in Egypt.
-      2. DOSAGE: You MUST provide the correct standard dosage for each medication suggested.
-      3. SUBSTITUTES: Rank by: 
-         - Same active ingredient (Generic)
-         - Same therapeutic class
-         - Local Egyptian manufacturers (Amoun, Eva, etc.)
-      4. SAFETY: Flag contraindications for these conditions: ${conditions}.
-      5. ${pharmacistDetail}
+      1. EGYPTIAN MARKET Focus.
+      2. SAFETY: Flag contraindications for these conditions: ${conditions}.
+      3. ${pharmacistDetail}
 
       You MUST return your response in a valid JSON format with the following structure:
       {
-          "medication_searched": "name",
-          "shortage_status": "status",
+          "medication_searched": "${query}",
+          "symbolic_meta": ${JSON.stringify(symbolicData.metadata)},
+          "shortage_status": "${symbolicData.exact_match ? 'In Stock (Found in DB)' : 'Likely Shortage (Consulting Substitutes)'}",
           "substitutes": [
               {
                   "name": "drug name",
@@ -152,7 +154,7 @@ app.post('/api/medadvisor', async (req, res) => {
     const completion = await groq.chat.completions.create({
       messages: [
         { role: 'system', content: systemPrompt },
-        { role: 'user', content: `Medication Query: ${query}` }
+        { role: 'user', content: `Interpret these findings for: ${query}` }
       ],
       model: "llama-3.3-70b-versatile",
       response_format: { type: "json_object" }

@@ -2,8 +2,13 @@ import axios from 'axios';
 
 const API_BASE_URL = 'http://localhost:5000/api';
 
-export const analyzeLabReport = async (text, isDoctor) => {
-  const response = await axios.post(`${API_BASE_URL}/analyze-lab`, { text, isDoctor });
+export const analyzeLabReport = async (imageFile, isDoctor) => {
+  const formData = new FormData();
+  formData.append('image', imageFile);
+  formData.append('isDoctor', isDoctor);
+  const response = await axios.post(`${API_BASE_URL}/analyze-lab-image`, formData, {
+    headers: { 'Content-Type': 'multipart/form-data' }
+  });
   return response.data;
 };
 
