@@ -2,7 +2,7 @@
 
 MedAI Insight is a state-of-the-art **Intelligent Decision Support System (IDSS)** designed to assist healthcare professionals in diagnostic clinical reasoning. By combining advanced Computer Vision (YOLO) with Large Language Models (Groq Llama 3.3 70B), the system provides high-precision analysis of medical imaging, lab results, and pharmaceutical queries.
 
-🚀 **Link for the recorded video of the project:** [Watch Demo on Google Drive](https://drive.google.com/file/d/12ilPdeNPuytHG8yOZ5WxxlpLdnm3UGBI/view?usp=sharing)
+🚀 **Link for the recorded video of the project:** [Watch Demo on Google Drive](https://drive.google.com/file/d/1lGO2xJRwzzxr5qNQEDrTHhP1mkD34CyW/view?usp=sharing)
 
 ---
 
@@ -71,5 +71,7 @@ The **IDSS Layer** is the "Neural Bridge" of this application. It performs three
 ## 🔒 Security
 All AI API keys are stored server-side in environment variables. No sensitive data is exposed to the client-side frontend, ensuring HIPAA-compliant architectural patterns.
 
+---
+🚀 **Made by: Asser Almasry | AI Engineer | All Rights Saved**
 ---
 *Disclaimer: This system is for educational and demonstrational purposes only. It does not replace professional medical advice.*
